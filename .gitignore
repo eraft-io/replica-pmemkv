@@ -1,0 +1,9 @@
+.*
+!.gitignore
+!.gitattributes
+!.github/
+!.clang-format
+*.d
+build/
+*~
+build_
