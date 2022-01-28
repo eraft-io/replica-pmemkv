@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.3)
 
 project(pmemkv)
 set(PMEMKV_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(${PMEMKV_ROOT_DIR}/cmake/helpers.cmake)
 set_version(VERSION)
@@ -44,7 +46,7 @@ option(ENGINE_DRAM_VCMAP "enable testing dram_vcmap engine" OFF)
 # ----------------------------------------------------------------- #
 ## Set required and useful variables
 # ----------------------------------------------------------------- #
-set(CXX_STANDARD 11 CACHE STRING "C++ language standard")
+set(CXX_STANDARD 17 CACHE STRING "C++ language standard")
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
@@ -468,3 +470,40 @@ if(NOT "${CPACK_GENERATOR}" STREQUAL "")
 endif()
 
 add_subdirectory(network)
+
+  # Keep Google Test's linkage of the runtime in sync our own
+  if(RUNTIME_STATIC_LINKAGE)
+  set(gtest_force_shared_crt OFF CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib." FORCE)
+else(RUNTIME_STATIC_LINKAGE)
+  set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib." FORCE)
+endif(RUNTIME_STATIC_LINKAGE)
+
+# Orgnize application, libraries, etc. in floders in the IDE.
+set_property(GLOBAL PROPERTY USE_FLODERS ON)
+
+# Ensure proper loading of side-loaded shared libraries on all target
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+if(APPLE)
+  set(CMAKE_INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+endif()
+
+# Don't add the goofy "d" postfix for debug builds of libraries.
+set(CMAKE_DEBUG_POSTFIX "")
+
+# Suppress Microsoft warnings about functions being unsafe.
+add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+
+# Google Test
+set(BUILD_GTEST ON CACHE BOOL "Builds the googletest subproject" FORCE)
+set(BUILD_GMOCK OFF CACHE BOOL "Builds the googlemock subproject" FORCE)
+
+add_subdirectory(googletest)
+set_target_properties(gtest_main gtest PROPERTIES
+  FOLDER libraries
+)
+
+add_subdirectory(protocol)
+add_subdirectory(raftcore)
